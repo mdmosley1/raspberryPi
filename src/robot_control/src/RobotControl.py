@@ -94,12 +94,11 @@ def main(args):
     # Intialize the RobotControl object
     robotControl = RobotControl(world_map,occupancy_map, pos_init, pos_goal, max_vel, max_omega, x_spacing, y_spacing, t_cam_to_body)
 
-    timeStart = rospy.get_time()
-    dur = 10 # duration in seconds
+
 
     # Call process_measurements at 60Hz
     r = rospy.Rate(60)
-    while (not rospy.is_shutdown()) and (rospy.get_time() - timeStart < dur):
+    while (not rospy.is_shutdown()):
         robotControl.process_measurements()
         r.sleep()
     # Done, stop robot
