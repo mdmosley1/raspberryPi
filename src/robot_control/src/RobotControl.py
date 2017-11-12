@@ -22,7 +22,7 @@ class RobotControl(object):
     Class used to interface with the rover. Gets sensor measurements through ROS subscribers,
     and transforms them into the 2D plane, and publishes velocity commands.
     """
-    def __init__(self, world_map,occupancy_map, pos_init, pos_goal, max_speed, max_omega, x_spacing, y_spacing, t_cam_to_body):
+    def __init__(self, markers, occupancy_map, pos_init, pos_goal, max_speed, max_omega, x_spacing, y_spacing, t_cam_to_body):
         """
         Initialize the class
         """
@@ -33,8 +33,9 @@ class RobotControl(object):
         # YOUR CODE AFTER THIS
         
         # Uncomment as completed
-        #self.kalman_filter = KalmanFilter(world_map)
+        #self.kalman_filter = KalmanFilter(markers)
         self.diff_drive_controller = DiffDriveController(max_speed, max_omega)
+        self.markers = markers
 
     def process_measurements(self):
         """ 
@@ -44,8 +45,33 @@ class RobotControl(object):
         meas = self.ros_interface.get_measurements()
         imu_meas = self.ros_interface.get_imu()
 
-        # move forward at 10 cm/s for dur seconds
-        self.ros_interface.command_velocity(.1, 0)
+        if not meas:
+            print('No tags detected!')
+            pass
+        else:
+            meas = np.array(meas) # convert to ndarray for easy slicing
+            x,y,theta,id,time = meas.flat[0:5] # get relative position of first tag
+            tagPos = self.markers[id,0:2]
+            tagTheta = self.markers[id,2]            
+
+            robotTheta = tagTheta - theta
+            ct,st = np.cos(robotTheta),np.sin(robotTheta)
+            Rot = np.array(((ct,-st),(st,ct)))
+            pos = np.array((x,y))                        
+            robotPos = tagPos - np.dot(Rot,pos)
+            
+            self.ros_interface.set_est_state(np.append(robotPos,robotTheta))
+
+            goal = self.ros_interface.goal
+            v,omega,done = \
+            self.diff_drive_controller.compute_vel(self.ros_interface.get_est_state(),goal)
+            if not done:
+                self.ros_interface.command_velocity(v,omega)
+            else:
+                print('We are done!')
+                self.ros_interface.command_velocity(0,0)
+                self.ros_interface.done = True
+                return
         
         return
     
