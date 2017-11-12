@@ -36,6 +36,7 @@ class RobotControl(object):
         #self.kalman_filter = KalmanFilter(markers)
         self.diff_drive_controller = DiffDriveController(max_speed, max_omega)
         self.markers = markers
+        self.goal = pos_goal
 
     def process_measurements(self):
         """ 
@@ -60,19 +61,15 @@ class RobotControl(object):
             pos = np.array((x,y))                        
             robotPos = tagPos - np.dot(Rot,pos)
             
-            self.ros_interface.set_est_state(np.append(robotPos,robotTheta))
+            state = np.append(robotPos,robotTheta)
 
-            goal = self.ros_interface.goal
-            v,omega,done = \
-            self.diff_drive_controller.compute_vel(self.ros_interface.get_est_state(),goal)
+            v,omega,done = self.diff_drive_controller.compute_vel(state, self.goal)
             if not done:
                 self.ros_interface.command_velocity(v,omega)
             else:
                 print('We are done!')
                 self.ros_interface.command_velocity(0,0)
-                self.ros_interface.done = True
                 return
-        
         return
     
 def main(args):
