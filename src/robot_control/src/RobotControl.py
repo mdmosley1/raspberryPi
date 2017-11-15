@@ -15,7 +15,7 @@ from RosInterface import ROSInterface
 # User files, uncomment as completed
 #from MyShortestPath import my_dijkstras
 #from KalmanFilter import KalmanFilter
-#from DiffDriveController import DiffDriveController
+from DiffDriveController import DiffDriveController
 
 class RobotControl(object):
     """
@@ -34,7 +34,7 @@ class RobotControl(object):
         
         # Uncomment as completed
         #self.kalman_filter = KalmanFilter(world_map)
-        #self.diff_drive_controller = DiffDriveController(max_speed, max_omega)
+        self.diff_drive_controller = DiffDriveController(max_speed, max_omega)
 
     def process_measurements(self):
         """ 
