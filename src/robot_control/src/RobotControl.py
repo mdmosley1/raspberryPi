@@ -3,14 +3,19 @@
 ROS based interface for the Course Robotics Specialization Capstone Autonomous Rover.
 Updated June 15 2016.
 """
-import rospy
+
 
 import yaml
 import numpy as np
-
 import sys
 
-from RosInterface import ROSInterface
+if mode == HARDWARE:
+    import rospy    
+    from RosInterface import ROSInterface
+
+if mode == SIMULATE:
+    import RobotSim as RS
+    import matplotlib.pyplot as plt
 
 # User files, uncomment as completed
 #from MyShortestPath import my_dijkstras
@@ -27,8 +32,13 @@ class RobotControl(object):
         Initialize the class
         """
 
-        # Handles all the ROS related items
-        self.ros_interface = ROSInterface(t_cam_to_body)
+        if mode == HARDWARE:
+            # Handles all the ROS related items
+            self.ros_interface = ROSInterface(t_cam_to_body)
+
+        if mode == SIMULATE:
+            self.robot_sim = RS.RobotSim(world_map, occupancy_map, pos_init, pos_goal,
+                                         max_speed, max_omega, x_spacing, y_spacing)
 
         # YOUR CODE AFTER THIS
         
@@ -41,34 +51,51 @@ class RobotControl(object):
     def process_measurements(self):
         """ 
         YOUR CODE HERE
-        This function is called at 60Hz
+        Main loop of the robot - where all measurements, control, and estimation
+        are done. This function is called at 60Hz
         """
-        meas = self.ros_interface.get_measurements()
-        imu_meas = self.ros_interface.get_imu()
+        pi = np.pi
+
+        if mode == SIMULATE:
+            meas = self.robot_sim.get_measurements() # x,y,theta,id,time
+            imu_meas = self.robot_sim.get_imu()
+        if mode == HARDWARE:
+            meas = self.ros_interface.get_measurements()
+            imu_meas = self.ros_interface.get_imu()
 
         if not meas:
-            print('No tags detected!')
+            #print('No tags detected!')
             pass
         else:
+            # print(meas)
             meas = np.array(meas) # convert to ndarray for easy slicing
-            x,y,theta,id,time = meas.flat[0:5] # get relative position of first tag
+            x,y,theta,id = meas.flat[0:4] # get relative position of first tag
             tagPos = self.markers[id,0:2]
             tagTheta = self.markers[id,2]            
 
-            robotTheta = tagTheta - theta
+            robotTheta = tagTheta - theta 
             ct,st = np.cos(robotTheta),np.sin(robotTheta)
             Rot = np.array(((ct,-st),(st,ct)))
             pos = np.array((x,y))                        
             robotPos = tagPos - np.dot(Rot,pos)
             
             state = np.append(robotPos,robotTheta)
+            if mode == SIMULATE:
+                self.robot_sim.set_est_state(state)
+            print("X = {} cm, Y = {} cm, Theta = {} deg".format(100*state[0],100*state[1],state[2]*180/pi))
 
             v,omega,done = self.diff_drive_controller.compute_vel(state, self.goal)
             if not done:
-                self.ros_interface.command_velocity(v,omega)
+                if mode == HARDWARE:
+                    self.ros_interface.command_velocity(v,omega)
+                if mode == SIMULATE:
+                    self.robot_sim.command_velocity(v,omega)
             else:
                 print('We are done!')
-                self.ros_interface.command_velocity(0,0)
+                if mode == HARDWARE:                
+                    self.ros_interface.command_velocity(0,0)                
+                if mode == SIMULATE:
+                    self.robot_sim.command_velocity(0,0)
                 return
         return
     
@@ -92,17 +119,28 @@ def main(args):
     y_spacing = params['y_spacing']
 
     # Intialize the RobotControl object
-    robotControl = RobotControl(world_map,occupancy_map, pos_init, pos_goal, max_vel, max_omega, x_spacing, y_spacing, t_cam_to_body)
+    robotControl = RobotControl(world_map,occupancy_map, pos_init, pos_goal,
+                                max_vel, max_omega, x_spacing, y_spacing,
+                                t_cam_to_body)
+    
+    if mode == HARDWARE:
+        # Call process_measurements at 60Hz
+        r = rospy.Rate(60)
+        while (not rospy.is_shutdown()):
+            robotControl.process_measurements()
+            r.sleep()
+        # Done, stop robot
+        robotControl.ros_interface.command_velocity(0,0)
 
+    if mode == SIMULATE:
+        # Run the simulation
+        while not robotControl.robot_sim.done and plt.get_fignums():
+            robotControl.process_measurements()
+            robotControl.robot_sim.update_frame()
+            wait = input("PRESS ENTER TO CONTINUE.")        
 
-
-    # Call process_measurements at 60Hz
-    r = rospy.Rate(60)
-    while (not rospy.is_shutdown()):
-        robotControl.process_measurements()
-        r.sleep()
-    # Done, stop robot
-    robotControl.ros_interface.command_velocity(0,0)
+        plt.ioff()
+        plt.show()
 
 if __name__ == "__main__":
     try:
