@@ -8,8 +8,8 @@ class DiffDriveController():
     """
     def __init__(self, max_speed, max_omega):
         # TODO for Student: Specify these parameters
-        self.kp=1
-        self.ka=5
+        self.kp=.2
+        self.ka=2
         self.kb=0
         self.tol = .1
         self.MAX_SPEED = max_speed
@@ -41,6 +41,15 @@ class DiffDriveController():
         v = self.kp * rho
         omega = self.ka*alpha + self.kb*beta
 
+        if abs(v) > self.MAX_SPEED:
+            v = self.MAX_SPEED
+
+        if abs(omega) > self.MAX_OMEGA:
+            omega = self.MAX_OMEGA
+
+        # saturate linear and angular velocity 
+        
+        # set done to true if robot is close to goal
         if np.abs(rho) < self.tol:
             done = True
         return v,omega,done

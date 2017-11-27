@@ -89,8 +89,8 @@ class ROSInterface(object):
         
     def get_measurements(self):
         """
-        Returns information about the last tag seen if any. Returns (x,y,theta) as a
-        3x1 numpy array. Returns None if no new tag is seen.
+        Returns information about the last tag seen if any. Returns (x,y,theta,id) as a
+        4x1 numpy array. Returns None if no new tag is seen.
         """
         if self._no_detection:
             return None
