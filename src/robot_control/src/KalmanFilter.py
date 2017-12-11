@@ -124,6 +124,15 @@ class KalmanFilter:
         x - current estimate of the state
         """
 
+        # print('imu_meas = ')
+        # print(imu_meas)
+        # print('')
+
+        # print('apriTagMeas = ')
+        # print(meas)
+        # print('')
+
+
         xp,Pp = self.prediction(v,imu_meas)
 
         # if no april tag measurements, then skip update stage and let x = xp
