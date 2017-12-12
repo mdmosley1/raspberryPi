@@ -37,7 +37,6 @@ class DiffDriveController():
             is close enough
         """
         pi = np.pi
-        
         theta = state[2]
         deltaX = self.goal[0] - state[0]
         deltaY = self.goal[1] - state[1]

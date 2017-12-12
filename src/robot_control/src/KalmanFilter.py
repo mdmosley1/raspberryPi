@@ -58,20 +58,12 @@ class KalmanFilter:
                                         (0, 0, v*np.cos(theta)), \
                                         (0, 0, 0)]) # jacobian of state transition function
         dfdn = dt*np.array(( (math.cos(theta), 1), (math.sin(theta), 1), (1, 1) ))
-
         xp = self.x + dt*np.array((v*np.cos(theta), v*np.sin(theta), omega))
-        # theta estimate has to be in range [-pi,pi]
-        # pi = np.pi
-        # if xp[2] > pi:
-        #     xp[2] -= 2*pi
-        # elif xp[2] < -pi:
-        #     xp[2] += 2*pi
-
         Pp = np.dot(np.dot(dfdx,self.P_t), dfdx.T) + np.dot(np.dot(dfdn, self.Q_t), dfdn.T)
         return xp,Pp
 
 
-    def update(self,meas,xp,Pp):
+    def update(self,z_t,xp,Pp):
         """
         Performs the update step on the state x_t and covariance P_t
         Inputs:
@@ -84,7 +76,14 @@ class KalmanFilter:
         Outputs:
         x - a 3 by 1 numpy array of the updated state
         """
+        tmp = np.linalg.inv(Pp + self.R_t)
+        K = np.dot(Pp, tmp)                  # II compute kalman gain
+        x = xp + np.dot(K,z_t - xp)          # III compute state estimate
+        P = Pp - np.dot(K,Pp)                # IV compute error covariance
 
+        return x,P
+
+    def transformMeasurement(self, meas):
         meas = np.array(meas) # convert to ndarray for easy slicing
         x,y,theta,id = meas.flat[0:4] # get relative position of first tag
         tagPos = self.markers[id,0:2]
@@ -98,19 +97,7 @@ class KalmanFilter:
         z_t = np.append(robotPos,robotTheta) # the robot state according to apriltag measurement
         z_t.shape = 3,1
 
-        tmp = np.linalg.inv(Pp + self.R_t)
-        K = np.dot(Pp, tmp)   # II compute kalman gain
-        
-        x = xp + np.dot(K,z_t - xp)                    # III compute state estimate
-        # print('IMU')
-        # print(xp)
-        # print('AprilTag')
-        # print(z_t)
-        # print('')
-
-        P = Pp - np.dot(K,Pp)                          # IV compute error covariance
-
-        return x,P
+        return z_t
         
     def step_filter(self, v, imu_meas, meas):
         """
@@ -130,7 +117,8 @@ class KalmanFilter:
         if not meas: 
             x = xp; P = Pp
         else:
-            x,P = self.update(meas, xp, Pp)
+            z_t = self.transformMeasurement(meas)
+            x,P = self.update(z_t, xp, Pp)
 
         self.x = x; self.P_t = P # save state and covariance estimates for next iteration
 

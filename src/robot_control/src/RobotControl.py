@@ -100,7 +100,7 @@ def main(args):
     if mode == 'HARDWARE':
         rospy.init_node('robot_control')
 
-        # Load parameters from yaml
+    # Load parameters from yaml
     # if mode == 'HARDWARE':        
     #     param_path = rospy.get_param("~param_path")
 
