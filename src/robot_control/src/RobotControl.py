@@ -3,26 +3,29 @@
 ROS based interface for the Course Robotics Specialization Capstone Autonomous Rover.
 Updated June 15 2016.
 """
-from importlib import reload
+
 import KalmanFilter as KF
 import DiffDriveController as DFC
-reload(KF)
-reload(DFC)
+
 
 import yaml
 import numpy as np
 import sys
 
-mode = 'SIMULATE'
+mode = 'HARDWARE'
 
 if mode == 'HARDWARE':
     import rospy    
     from RosInterface import ROSInterface
 
 elif mode == 'SIMULATE':
+    from importlib import reload
     import RobotSim as RS
+    import matplotlib.pyplot as plt    
+
+    reload(KF)
+    reload(DFC)    
     reload(RS)
-    import matplotlib.pyplot as plt
 
 # User files, uncomment as completed
 #from MyShortestPath import my_dijkstras
@@ -70,13 +73,13 @@ class RobotControl(object):
             imu_meas = self.robot_sim.get_imu()
 
         #pdb.set_trace()
-        if (meas == None) and (imu_meas == None):
+        if imu_meas == None:
             pass
         else:
             state = self.kalman_filter.step_filter(self.vel, imu_meas, meas)                        
             if mode == 'SIMULATE':
                 self.robot_sim.set_est_state(state)
-            #print("X = {} cm, Y = {} cm, Theta = {} deg".format(100*state[0],100*state[1],state[2]*180/pi))
+            print("X = {} cm, Y = {} cm, Theta = {} deg".format(100*state[0],100*state[1],state[2]*180/pi))
 
             v,omega,done = self.diff_drive_controller.compute_vel(state)
             self.vel = v
@@ -99,14 +102,10 @@ class RobotControl(object):
 def main(args):
     if mode == 'HARDWARE':
         rospy.init_node('robot_control')
+        param_path = rospy.get_param("~param_path")        
 
-    # Load parameters from yaml
-    # if mode == 'HARDWARE':        
-    #     param_path = rospy.get_param("~param_path")
-
-    #if mode == 'SIMULATE':
-        #   param_path = 'params.yaml'
-    param_path = 'params2.yaml'
+    if mode == 'SIMULATE':
+        param_path = 'params2.yaml'
 
     f = open(param_path,'r')
     params_raw = f.read()
