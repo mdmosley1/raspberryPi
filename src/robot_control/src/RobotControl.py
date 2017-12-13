@@ -12,7 +12,8 @@ import yaml
 import numpy as np
 import sys
 
-mode = 'HARDWARE'
+#mode = 'HARDWARE'
+mode = 'SIMULATE'
 
 if mode == 'HARDWARE':
     import rospy    
@@ -105,7 +106,7 @@ def main(args):
         param_path = rospy.get_param("~param_path")        
 
     if mode == 'SIMULATE':
-        param_path = 'params2.yaml'
+        param_path = '../params/params.yaml'
 
     f = open(param_path,'r')
     params_raw = f.read()

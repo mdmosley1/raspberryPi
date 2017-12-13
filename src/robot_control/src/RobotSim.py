@@ -230,6 +230,10 @@ class RobotSim(object):
         self.__history_x = np.zeros((1,self.__lag_len))
         self.__history_y = np.zeros((1,self.__lag_len))
         self.__trails = [plt.plot(hx,hy,'k')[0] for hx,hy in zip(self.__history_x,self.__history_y)]
+
+        plt.grid(True) # grid on
+        axes.set_xlim((0,1.5))        
+        axes.set_ylim((0,1))
         
 
     def command_velocity(self,vx,wz):
