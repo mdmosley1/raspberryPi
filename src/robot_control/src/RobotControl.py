@@ -12,8 +12,8 @@ import yaml
 import numpy as np
 import sys
 
-#mode = 'HARDWARE'
-mode = 'SIMULATE'
+mode = 'HARDWARE'
+#mode = 'SIMULATE'
 
 if mode == 'HARDWARE':
     import rospy    

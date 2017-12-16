@@ -53,7 +53,7 @@ class DiffDriveController():
 
         # if v > self.MAX_SPEED:
         #     v = self.MAX_SPEED
-        v = 0.3
+        v = 0.1
             
 
         if omega > self.MAX_OMEGA:
