@@ -48,14 +48,13 @@ class DiffDriveController():
             alpha += 2*pi
         beta = -theta - alpha
 
-        v = self.kp * rho
+        #v = self.kp * rho
         omega = self.ka*alpha + self.kb*beta
 
-        if v > self.MAX_SPEED:
-            v = self.MAX_SPEED
-
-        if v < 0.1:
-            v = 0.1
+        # if v > self.MAX_SPEED:
+        #     v = self.MAX_SPEED
+        v = 0.3
+            
 
         if omega > self.MAX_OMEGA:
             omega = self.MAX_OMEGA
