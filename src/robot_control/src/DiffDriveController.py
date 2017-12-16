@@ -53,7 +53,7 @@ class DiffDriveController():
 
         # if v > self.MAX_SPEED:
         #     v = self.MAX_SPEED
-        v = 0.1
+        v = 0.05 # force robot to drive slow
             
 
         if omega > self.MAX_OMEGA:

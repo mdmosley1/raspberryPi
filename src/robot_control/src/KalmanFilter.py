@@ -64,6 +64,8 @@ class KalmanFilter:
         xp = self.x + dt*np.array((v*np.cos(theta), v*np.sin(theta), omega))
         Pp = np.dot(np.dot(dfdx,self.P_t), dfdx.T) + np.dot(np.dot(dfdn, self.Q_t), dfdn.T)
 
+        print(omega*dt)
+
         return xp,Pp
 
 
@@ -115,16 +117,16 @@ class KalmanFilter:
         x - current estimate of the state
         """
 
-        # print('imu_meas = ')
-        # print(imu_meas)
-        # print('')
 
-        # print('apriTagMeas = ')
-        # print(meas)
-        # print('')
 
 
         xp,Pp = self.prediction(v,imu_meas)
+
+        # print('imu_meas = ')
+        # print(xp)
+        # print('')
+
+
 
         # if no april tag measurements, then skip update stage and let x = xp
         if not meas: 
@@ -132,6 +134,10 @@ class KalmanFilter:
         else:
             z_t = self.transformMeasurement(meas)
             x,P = self.update(z_t, xp, Pp)
+
+            # print('at_meas = ')
+            # print(z_t)
+            # print('')
 
         self.x = x; self.P_t = P # save state and covariance estimates for next iteration
 
