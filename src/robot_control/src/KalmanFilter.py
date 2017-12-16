@@ -25,7 +25,7 @@ class KalmanFilter:
             moment
         """
         self.markers = markers
-        self.last_time = 0 # Used to keep track of time between measurements 
+        self.last_time = None # Used to keep track of time between measurements 
         self.Q_t = np.eye(2)   # process covariance
         self.R_t = np.eye(3)   # measurement covariance
         self.P_t = np.eye(3)   # error covariance
@@ -51,7 +51,10 @@ class KalmanFilter:
         current_time = imu_meas[4]
         theta = self.x[2]
 
-        dt = current_time - self.last_time
+        if self.last_time == None:
+            dt = 0
+        else:
+            dt = current_time - self.last_time
         self.last_time = current_time
         
         dfdx = np.eye(3) + dt*np.array([(0, 0,-v*np.sin(theta)), \
@@ -60,6 +63,7 @@ class KalmanFilter:
         dfdn = dt*np.array(( (math.cos(theta), 1), (math.sin(theta), 1), (1, 1) ))
         xp = self.x + dt*np.array((v*np.cos(theta), v*np.sin(theta), omega))
         Pp = np.dot(np.dot(dfdx,self.P_t), dfdx.T) + np.dot(np.dot(dfdn, self.Q_t), dfdn.T)
+
         return xp,Pp
 
 

@@ -80,6 +80,7 @@ class RobotControl(object):
             state = self.kalman_filter.step_filter(self.vel, imu_meas, meas)                        
             if mode == 'SIMULATE':
                 self.robot_sim.set_est_state(state)
+
             print("X = {} cm, Y = {} cm, Theta = {} deg".format(100*state[0],100*state[1],state[2]*180/pi))
 
             v,omega,done = self.diff_drive_controller.compute_vel(state)
