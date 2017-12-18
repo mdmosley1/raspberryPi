@@ -12,8 +12,8 @@ import yaml
 import numpy as np
 import sys
 
-#mode = 'HARDWARE'
-mode = 'SIMULATE'
+mode = 'HARDWARE'
+#mode = 'SIMULATE'
 
 if mode == 'HARDWARE':
     import rospy    
@@ -82,7 +82,7 @@ class RobotControl(object):
             if mode == 'SIMULATE':
                 self.robot_sim.set_est_state(state)
 
-            #print("X = {} cm, Y = {} cm, Theta = {} deg".format(100*state[0],100*state[1],state[2]*180/pi))
+            print("X = {} cm, Y = {} cm, Theta = {} deg".format(100*state[0],100*state[1],state[2]*180/pi))
 
             v,omega,done = self.diff_drive_controller.compute_vel(state)
             self.vel = v
