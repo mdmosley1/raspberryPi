@@ -1,0 +1,6 @@
+*.pyc
+build/*
+devel/*
+src/raspicam_node/*
+.catkin_workspace
+
