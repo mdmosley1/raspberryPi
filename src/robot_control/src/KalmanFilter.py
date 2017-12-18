@@ -92,6 +92,7 @@ class KalmanFilter:
         numberOfTags = meas.shape[0]
 
         z_t = np.array((0,0,0)) # initialize measured state
+        weightsSum = 0          # sum of weights for taking weighted average
         for tagNum in range(0,numberOfTags):
             x,y,theta,tagID = meas[tagNum, 0:4] # unpack values for this tag
 
@@ -103,7 +104,15 @@ class KalmanFilter:
             Rot = np.array(((ct,-st),(st,ct)))
             pos = np.array((x,y))                        
             robotPos = tagPos - np.dot(Rot,pos)
-            z_t = z_t + np.append(robotPos,robotTheta) / numberOfTags #the robot state according to apriltag measurement
+
+            weight = 1 / abs(theta) # weigth this measurement more heavily if theta is small
+            weightsSum += weight
+            z_t = z_t + np.append(robotPos,robotTheta) * weight #the robot state according to apriltag measurement
+
+            # make z_t = weighted average of april tag positions, weighted based on which tag is most directly facing
+            # the camera
+            
+        z_t = z_t / weightsSum # normalize average
         
         z_t.shape = 3,1
         return z_t
