@@ -64,8 +64,6 @@ class KalmanFilter:
         xp = self.x + dt*np.array((v*np.cos(theta), v*np.sin(theta), omega))
         Pp = np.dot(np.dot(dfdx,self.P_t), dfdx.T) + np.dot(np.dot(dfdn, self.Q_t), dfdn.T)
 
-        print(omega*dt)
-
         return xp,Pp
 
 
@@ -91,18 +89,23 @@ class KalmanFilter:
 
     def transformMeasurement(self, meas):
         meas = np.array(meas) # convert to ndarray for easy slicing
-        x,y,theta,id = meas.flat[0:4] # get relative position of first tag
-        tagPos = self.markers[id,0:2]
-        tagTheta = self.markers[id,2]
+        numberOfTags = meas.shape[0]
 
-        robotTheta = tagTheta - theta 
-        ct,st = np.cos(robotTheta),np.sin(robotTheta)
-        Rot = np.array(((ct,-st),(st,ct)))
-        pos = np.array((x,y))                        
-        robotPos = tagPos - np.dot(Rot,pos)
-        z_t = np.append(robotPos,robotTheta) # the robot state according to apriltag measurement
+        z_t = np.array((0,0,0)) # initialize measured state
+        for tagNum in range(0,numberOfTags):
+            x,y,theta,tagID = meas[tagNum, 0:4] # unpack values for this tag
+
+            tagPos = self.markers[tagID,0:2]
+            tagTheta = self.markers[tagID,2]
+
+            robotTheta = tagTheta - theta 
+            ct,st = np.cos(robotTheta),np.sin(robotTheta)
+            Rot = np.array(((ct,-st),(st,ct)))
+            pos = np.array((x,y))                        
+            robotPos = tagPos - np.dot(Rot,pos)
+            z_t = z_t + np.append(robotPos,robotTheta) / numberOfTags #the robot state according to apriltag measurement
+        
         z_t.shape = 3,1
-
         return z_t
         
     def step_filter(self, v, imu_meas, meas):
@@ -117,29 +120,20 @@ class KalmanFilter:
         x - current estimate of the state
         """
 
+        if (imu_meas != None) and (meas == None):
+            xp,Pp = self.prediction(v,imu_meas)
+            self.x = xp; self.P_t = Pp
+            return xp
 
+        elif (imu_meas == None) and (meas != None):
+            z_t = self.transformMeasurement(meas)
+            self.x = z_t
+            return z_t
 
-
-        xp,Pp = self.prediction(v,imu_meas)
-
-        # print('imu_meas = ')
-        # print(xp)
-        # print('')
-
-
-
-        # if no april tag measurements, then skip update stage and let x = xp
-        if not meas: 
-            x = xp; P = Pp
-        else:
+        else: # both measurements contain values
+            xp,Pp = self.prediction(v,imu_meas)            
             z_t = self.transformMeasurement(meas)
             x,P = self.update(z_t, xp, Pp)
 
-            # print('at_meas = ')
-            # print(z_t)
-            # print('')
-
-        self.x = x; self.P_t = P # save state and covariance estimates for next iteration
-
-        return x
-        
+            self.x = x; self.P_t = P
+            return x

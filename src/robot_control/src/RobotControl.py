@@ -12,8 +12,8 @@ import yaml
 import numpy as np
 import sys
 
-mode = 'HARDWARE'
-#mode = 'SIMULATE'
+#mode = 'HARDWARE'
+mode = 'SIMULATE'
 
 if mode == 'HARDWARE':
     import rospy    
@@ -73,11 +73,12 @@ class RobotControl(object):
             meas = self.robot_sim.get_measurements() # x,y,theta,id,time
             imu_meas = self.robot_sim.get_imu()
 
+        imu_meas = None
         #pdb.set_trace()
-        if imu_meas == None:
+        if (imu_meas == None) and (meas == None):
             pass
         else:
-            state = self.kalman_filter.step_filter(self.vel, imu_meas, meas)                        
+            state = self.kalman_filter.step_filter(self.vel, imu_meas, meas)
             if mode == 'SIMULATE':
                 self.robot_sim.set_est_state(state)
 
