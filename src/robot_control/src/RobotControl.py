@@ -73,7 +73,7 @@ class RobotControl(object):
             meas = self.robot_sim.get_measurements() # x,y,theta,id,time
             imu_meas = self.robot_sim.get_imu()
 
-        meas = None # for testing purposes
+        #meas = None # for testing purposes
         #imu_meas = None # for testing purpose
         #pdb.set_trace()
         if (imu_meas == None) and (meas == None):
@@ -83,10 +83,10 @@ class RobotControl(object):
             if mode == 'SIMULATE':
                 self.robot_sim.set_est_state(state)
 
-            print("X = {} cm, Y = {} cm, Theta = {} deg".format(100*state[0],100*state[1],state[2]*180/pi))
+            #print("X = {} cm, Y = {} cm, Theta = {} deg".format(100*state[0],100*state[1],state[2]*180/pi))
 
             v,omega,done = self.diff_drive_controller.compute_vel(state)
-            omega = 0 # for testing purposes
+            #omega = 0 # for testing purposes
             self.vel = v
             
             if not done:
@@ -97,12 +97,16 @@ class RobotControl(object):
             else:
                 print('We are done!')
                 if mode == 'HARDWARE':                
-                    self.ros_interface.command_velocity(0,0)                
+                    self.ros_interface.command_velocity(0,0)
+                    rospy.on_shutdown(self.myhook)
                 elif mode == 'SIMULATE':
                     self.robot_sim.command_velocity(0,0)
                     self.robot_sim.done = True
                 return
         return
+
+    def myhook():
+        print "shutdown time!"
     
 def main(args):
     if mode == 'HARDWARE':
@@ -133,7 +137,7 @@ def main(args):
     
     if mode == 'HARDWARE':
         # Call process_measurements at 60Hz
-        r = rospy.Rate(60)
+        r = rospy.Rate(10)
         while (not rospy.is_shutdown()):
             robotControl.process_measurements()
             r.sleep()
