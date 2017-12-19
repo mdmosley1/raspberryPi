@@ -73,6 +73,7 @@ class RobotControl(object):
             meas = self.robot_sim.get_measurements() # x,y,theta,id,time
             imu_meas = self.robot_sim.get_imu()
 
+        meas = None # for testing purposes
         #imu_meas = None # for testing purpose
         #pdb.set_trace()
         if (imu_meas == None) and (meas == None):
@@ -85,6 +86,7 @@ class RobotControl(object):
             print("X = {} cm, Y = {} cm, Theta = {} deg".format(100*state[0],100*state[1],state[2]*180/pi))
 
             v,omega,done = self.diff_drive_controller.compute_vel(state)
+            omega = 0 # for testing purposes
             self.vel = v
             
             if not done:

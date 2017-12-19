@@ -47,7 +47,7 @@ class KalmanFilter:
         Pp - a 3 by 3 numpy array of the prediction of the covariance
         """
 
-        omega = imu_meas[3]
+        omega = -imu_meas[3]
         current_time = imu_meas[4]
         theta = self.x[2]
 
@@ -95,6 +95,7 @@ class KalmanFilter:
         weightsSum = 0          # sum of weights for taking weighted average
         for tagNum in range(0,numberOfTags):
             x,y,theta,tagID = meas[tagNum, 0:4] # unpack values for this tag
+            y = y / 2 # correction factor 
 
             tagPos = self.markers[tagID,0:2]
             tagTheta = self.markers[tagID,2]
