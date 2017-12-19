@@ -73,7 +73,7 @@ class RobotControl(object):
             meas = self.robot_sim.get_measurements() # x,y,theta,id,time
             imu_meas = self.robot_sim.get_imu()
 
-        imu_meas = None
+        #imu_meas = None # for testing purpose
         #pdb.set_trace()
         if (imu_meas == None) and (meas == None):
             pass
