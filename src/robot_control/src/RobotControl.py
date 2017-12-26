@@ -6,14 +6,15 @@ Updated June 15 2016.
 
 import KalmanFilter as KF
 import DiffDriveController as DFC
-
+import UserControl as UC
 
 import yaml
 import numpy as np
 import sys
+import csv
 
-mode = 'HARDWARE'
-#mode = 'SIMULATE'
+#mode = 'HARDWARE'
+mode = 'SIMULATE'
 
 if mode == 'HARDWARE':
     import rospy    
@@ -22,11 +23,12 @@ if mode == 'HARDWARE':
 elif mode == 'SIMULATE':
     from importlib import reload
     import RobotSim as RS
-    import matplotlib.pyplot as plt    
+    import matplotlib.pyplot as plt
 
     reload(KF)
     reload(DFC)    
     reload(RS)
+    reload(UC)
 
 # User files, uncomment as completed
 #from MyShortestPath import my_dijkstras
@@ -55,16 +57,18 @@ class RobotControl(object):
 
         self.kalman_filter = KalmanFilter(markers, pos_init)
         self.diff_drive_controller = DiffDriveController(max_speed, max_omega, pos_goal)
-        self.vel = 0 # save velocity to use for kalman filter 
+        #self.user_control = UserControl()
+        self.vel = 0 # save velocity to use for kalman filter
+
+        # for logging postion data to csv file
+        self.fd = open('document.csv','a')
+        self.writer = csv.writer(self.fd)
 
     def process_measurements(self):
         """ 
-        YOUR CODE HERE
         Main loop of the robot - where all measurements, control, and estimation
-        are done. This function is called at 60Hz
+        are done.
         """
-        pi = np.pi
-
         if mode == 'HARDWARE':
             meas = self.ros_interface.get_measurements()
             imu_meas = self.ros_interface.get_imu()
@@ -82,9 +86,14 @@ class RobotControl(object):
             if mode == 'SIMULATE':
                 self.robot_sim.set_est_state(state)
 
-            print("X = {} cm, Y = {} cm, Theta = {} deg".format(100*state[0],100*state[1],state[2]*180/pi))
+            print("X = {} cm, Y = {} cm, Theta = {} deg".format(100*state[0],100*state[1],state[2]*180/np.pi))
+            self.writer.writerow(state)
+
 
             v,omega,done = self.diff_drive_controller.compute_vel(state)
+            # write code to control robot with arrow keys            
+            #v,omega = self.user_control.compute_vel()
+
             self.vel = v
             
             if not done:
@@ -94,6 +103,7 @@ class RobotControl(object):
                     self.robot_sim.command_velocity(v,omega)
             else:
                 print('We are done!')
+                self.fd.close()
                 if mode == 'HARDWARE':                
                     self.ros_interface.command_velocity(0,0)                
                 elif mode == 'SIMULATE':
