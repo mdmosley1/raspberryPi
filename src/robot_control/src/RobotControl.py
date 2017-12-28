@@ -61,8 +61,8 @@ class RobotControl(object):
         self.vel = 0 # save velocity to use for kalman filter
 
         # for logging postion data to csv file
-        self.fd = open('document.csv','a')
-        self.writer = csv.writer(self.fd)
+        self.stateSaved = []
+        self.tagsSaved = []        
 
     def process_measurements(self):
         """ 
@@ -79,16 +79,21 @@ class RobotControl(object):
 
         #imu_meas = None # for testing purpose
         #pdb.set_trace()
-        if (imu_meas == None) and (meas == None):
+        if (imu_meas is None) and (meas is None):
             pass
         else:
             state = self.kalman_filter.step_filter(self.vel, imu_meas, meas)
             if mode == 'SIMULATE':
                 self.robot_sim.set_est_state(state)
 
-            print("X = {} cm, Y = {} cm, Theta = {} deg".format(100*state[0],100*state[1],state[2]*180/np.pi))
-            self.writer.writerow(state)
-
+            #print("X = {} cm, Y = {} cm, Theta = {} deg".format(100*state[0],100*state[1],state[2]*180/np.pi))
+            self.stateSaved.append(state)
+            if meas is None:
+                self.tagsSaved.append(None)
+            else:
+                meas = np.array(meas)
+                tagIDs = [int(i) for i in meas[:,3]]
+                self.tagsSaved.append(tagIDs)        
 
             v,omega,done = self.diff_drive_controller.compute_vel(state)
             # write code to control robot with arrow keys            
@@ -96,20 +101,21 @@ class RobotControl(object):
 
             self.vel = v
             
-            if not done:
-                if mode == 'HARDWARE':
-                    self.ros_interface.command_velocity(v,omega)
-                elif mode == 'SIMULATE':
-                    self.robot_sim.command_velocity(v,omega)
-            else:
+            if done:
                 print('We are done!')
-                self.fd.close()
+                np.savez('savedState.npz', stateSaved = self.stateSaved, tagsSaved = self.tagsSaved)
+                print('Position data saved!')                
                 if mode == 'HARDWARE':                
                     self.ros_interface.command_velocity(0,0)                
                 elif mode == 'SIMULATE':
                     self.robot_sim.command_velocity(0,0)
                     self.robot_sim.done = True
-                return
+                return                    
+            else:
+                if mode == 'HARDWARE':
+                    self.ros_interface.command_velocity(v,omega)
+                elif mode == 'SIMULATE':
+                    self.robot_sim.command_velocity(v,omega)                
         return
     
 def main(args):
