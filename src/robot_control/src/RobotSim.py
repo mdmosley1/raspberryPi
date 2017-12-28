@@ -160,7 +160,6 @@ class RobotSim(object):
                                 [self.__x_gt[0,0], self.__x_gt[0,0] + distance*cosx],
                                 [self.__x_gt[1,0], self.__x_gt[1,0] - distance*sinx],'r-')
 
-        plt.hold(True)
 
         # Drawing of robot (building drawing objects for it)
         self.__bot_parts = [ 0 for i in range(len(self.__shapes)) ]
@@ -330,7 +329,6 @@ class RobotSim(object):
         (where the simulating happens)
         """
         # Prep for the next frame
-        plt.hold(True)
         self.__frame_num += 1
         if self.done:
             return # early termination
@@ -403,9 +401,6 @@ class RobotSim(object):
                     pts[k][1] = self.__est_state[1] + sin*self.__shapes[s][k][0] + cos*self.__shapes[s][k][1]
                 self.__bot_parts_est[s].set_xy(pts)
             self.__est_state = None
-
-        # Finish plotting stuff
-        plt.axes(xlim=(-0.5,2),ylim=(0,1))
 
         # Plot title
         plt.title("At timestep: %.2f" %(self.__frame_num*self.__dt))
