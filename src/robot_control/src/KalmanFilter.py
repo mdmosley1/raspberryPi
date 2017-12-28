@@ -95,6 +95,7 @@ class KalmanFilter:
         weightsSum = 0          # sum of weights for taking weighted average
         for tagNum in range(0,numberOfTags):
             x,y,theta,tagID = meas[tagNum, 0:4] # unpack values for this tag
+            tagID = int(tagID)
 
             tagPos = self.markers[tagID,0:2]
             tagTheta = self.markers[tagID,2]
@@ -129,12 +130,12 @@ class KalmanFilter:
         x - current estimate of the state
         """
 
-        if (imu_meas != None) and (meas == None):
+        if (imu_meas is not None) and (meas is None):
             xp,Pp = self.prediction(v,imu_meas)
             self.x = xp; self.P_t = Pp
             return xp
 
-        elif (imu_meas == None) and (meas != None):
+        elif (imu_meas is None) and (meas is not None):
             z_t = self.transformMeasurement(meas)
             self.x = z_t
             return z_t
