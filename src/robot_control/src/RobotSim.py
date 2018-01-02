@@ -1,5 +1,6 @@
 #!/usr/bin/python
 import numpy as np
+import time
 import matplotlib.pyplot as plt
 from matplotlib import animation
 from matplotlib import patches
@@ -13,7 +14,7 @@ class RobotSim(object):
     Visualizes/simulates trajectory of robot over time
     """
     def __init__(self, markers, occupancy_map, pos_init, pos_goal, max_speed,
-                 max_omega, x_spacing, y_spacing):
+                 max_omega, x_spacing, y_spacing, waypoints, mode):
         """
         Initializes the class
         Inputs:
@@ -47,11 +48,11 @@ class RobotSim(object):
         # How many time steps behind the robot the path is drawn
         self.__lag_len = 100000
         # How wide to draw the markers in the simulation
-        self.__marker_width = 0.05
+        self.__marker_width = 0.02#0.05
         # How high to draw the markers in the simulation
-        self.__marker_height = 0.1
+        self.__marker_height = 0.075#0.1
         # Simulated IMU noise structure
-        self.__imu_noise = [0.05, 0.05, 0.05, 0.02]
+        self.__imu_noise = [0.02, 0.02, 0.02, 0.01]
         # Simulated control input noise structure
         self.__control_noise = [0.05, 0.05]
         # Simulated noise from image measurements
@@ -101,14 +102,21 @@ class RobotSim(object):
         self.__vel = 0
         self.__omega = 0
         # For history
-        self.__acc_history = np.array([pos_init[:,0].tolist(),pos_init[:,0].tolist(),pos_init[:,0].tolist()])
+        self.__acc_history = np.array([pos_init, pos_init, pos_init])
         # For termination
         self.done=False
         self.__frame_num = 0
-        self.goal = pos_goal.T
-
+        self.goal = pos_goal
+        self.waypoints = waypoints
         plt.ion()
+
+        self.mode = mode
+
+        if "SaveVideo" in self.mode:
+            self.writer = animation.FFMpegWriter(fps=20)
+
         self.__plot()
+
             
     def get_imu(self):
         """
@@ -123,7 +131,7 @@ class RobotSim(object):
             return None
         self.last_imu_time = curr_time
         noise = np.random.normal(0,self.__imu_noise)
-        R = self.__gen_R(self.__x_gt[2,0])
+        R = self.__gen_R(self.__x_gt[2])
 
         accx = (self.__acc_history[0, 0]+ self.__acc_history[2, 0]-2* self.__acc_history[1, 0])/(self.__dt**2)
         accy = (self.__acc_history[0, 1]+self.__acc_history[2, 1]-2*self.__acc_history[1, 1])/(self.__dt**2)
@@ -143,10 +151,13 @@ class RobotSim(object):
 
 
         # Main plot function calls
-        self.__line, = plt.plot(self.__x_gt[0,0], self.__x_gt[1,0],'o')
+        self.__line, = plt.plot(self.__x_gt[0], self.__x_gt[1],'o')
         plt.axis('equal')
-        axes = plt.axes(xlim=(-0.5,2),ylim=(0,1))
-        axes.set_aspect('equal')
+        fig = plt.figure()
+        if "SaveVideo" in self.mode:
+            self.writer.setup(fig,"writer_test.mp4")
+        self.axes = plt.axes(xlim=(-0.1,1.8),ylim=(-0.1,1.0))
+        self.axes.set_aspect('equal')
        
 
         # Viewing angle visualization
@@ -154,13 +165,12 @@ class RobotSim(object):
         cosx = np.cos(self.__view_half_angle)
         sinx = np.sin(self.__view_half_angle)
         self.__view_lines_1, = plt.plot(
-                                [self.__x_gt[0,0], self.__x_gt[0,0] + distance*cosx],
-                                [self.__x_gt[1,0], self.__x_gt[1,0] + distance*sinx],'r-')
+                                [self.__x_gt[0], self.__x_gt[0] + distance*cosx],
+                                [self.__x_gt[1], self.__x_gt[1] + distance*sinx],'r-')
         self.__view_lines_2, = plt.plot(
-                                [self.__x_gt[0,0], self.__x_gt[0,0] + distance*cosx],
-                                [self.__x_gt[1,0], self.__x_gt[1,0] - distance*sinx],'r-')
+                                [self.__x_gt[0], self.__x_gt[0] + distance*cosx],
+                                [self.__x_gt[1], self.__x_gt[1] - distance*sinx],'r-')
 
-        plt.hold(True)
 
         # Drawing of robot (building drawing objects for it)
         self.__bot_parts = [ 0 for i in range(len(self.__shapes)) ]
@@ -168,15 +178,15 @@ class RobotSim(object):
             self.__bot_parts[s] = patches.Polygon(
                                     self.__shapes[s],
                                     fill=True,facecolor='b',edgecolor='k')
-            axes.add_patch(self.__bot_parts[s])
+            self.axes.add_patch(self.__bot_parts[s])
 
+        # Drawing of estimated robot position
         self.__bot_parts_est = [ 0 for i in range(len(self.__shapes)) ]
-
         for s in range(len(self.__shapes)):
             self.__bot_parts_est[s] = patches.Polygon(
                                     self.__shapes[s],
                                     fill=False, facecolor='w',edgecolor='k')
-            axes.add_patch(self.__bot_parts_est[s])
+            self.axes.add_patch(self.__bot_parts_est[s])
 
         # Drawing of the map (building drawing objects)
         # Obstacles
@@ -191,7 +201,7 @@ class RobotSim(object):
                         self.__x_spacing,
                         self.__y_spacing,
                         fill=True, facecolor='r', edgecolor='k')
-                    axes.add_patch(self.__obstacles[obs_iter])
+                    self.axes.add_patch(self.__obstacles[obs_iter])
                     obs_iter+=1
         # Markers
         self.__markers = [ 0 for i in range(len(self.markers_flipped)) ]
@@ -220,19 +230,34 @@ class RobotSim(object):
                 0.04,
                 angle=(self.markers_flipped[m][2]/np.pi)*180.0,
                 fill=True,facecolor='r',edgecolor='k')
-            axes.add_patch(self.__markers[m])
-            axes.add_patch(self.__markers_dir[m])
+            self.axes.add_patch(self.__markers[m])
+            self.axes.add_patch(self.__markers_dir[m])
 
-        # plot the goal
-        plt.plot(self.goal[0],self.goal[1],'ro')            
-
+        plt.grid(True) # grid on
+            
         # Trail points of path
         self.__history_x = np.zeros((1,self.__lag_len))
         self.__history_y = np.zeros((1,self.__lag_len))
         self.__trails = [plt.plot(hx,hy,'k')[0] for hx,hy in zip(self.__history_x,self.__history_y)]
 
-        plt.grid(True) # grid on
+        # Draw robot (with rectables specified by __shapes)
+        cos = math.cos(self.__x_gt[2])
+        sin = math.sin(self.__x_gt[2])
+        for s in range(len(self.__shapes)):
+            pts = np.zeros((len(self.__shapes[s]),2))
+            for k in range(len(self.__shapes[s])):
+                pts[k][0] = self.__x_gt[0] + cos*self.__shapes[s][k][0] - sin*self.__shapes[s][k][1]
+                pts[k][1] = self.__x_gt[1] + sin*self.__shapes[s][k][0] + cos*self.__shapes[s][k][1]
+            self.__bot_parts[s].set_xy(pts)
 
+        # plot the goal and waypoints
+
+        plt.plot(self.goal[0],self.goal[1],'ro')            
+        for wp in self.waypoints:
+            wp.plot(self.axes)
+            if "SaveVideo" in self.mode:
+                self.writer.grab_frame()
+            plt.pause(.005)
 
     def command_velocity(self,vx,wz):
         """
@@ -292,7 +317,7 @@ class RobotSim(object):
         self.last_meas_time = curr_time
         self.__visible_markers = [False for i in range(len(self.markers_flipped))]
 
-        H_WR = self.__H(self.__x_gt[:,0])
+        H_WR = self.__H(self.__x_gt)
         # Get measurements to the robot frame
         meas = []
 
@@ -308,6 +333,8 @@ class RobotSim(object):
                 meas_i = np.array([x_new[0],x_new[1], theta_new, self.markers_flipped[i][3], self.last_meas_time])
                 meas_i[0:3] = meas_i[0:3] + np.array([np.random.normal(0, self.__image_noise)])
                 meas.append(meas_i.tolist())
+        if not meas:
+            meas = None
         return meas
 
     def set_est_state(self, est_state):
@@ -330,7 +357,6 @@ class RobotSim(object):
         (where the simulating happens)
         """
         # Prep for the next frame
-        plt.hold(True)
         self.__frame_num += 1
         if self.done:
             return # early termination
@@ -345,18 +371,18 @@ class RobotSim(object):
                 self.__markers_dir[i].set_facecolor('r')
 
         # Update properties
-        self.__x_gt[0,0] += self.__dt*self.__vel*np.cos(self.__x_gt[2,0])
-        self.__x_gt[1,0] += self.__dt*self.__vel*np.sin(self.__x_gt[2,0])
-        self.__x_gt[2,0] += self.__dt*self.__omega
-        if self.__x_gt[2,0] > np.pi:
-            self.__x_gt[2,0] -= 2*np.pi
-        if self.__x_gt[2,0] < -np.pi:
-            self.__x_gt[2,0] += 2*np.pi
+        self.__x_gt[0] += self.__dt*self.__vel*np.cos(self.__x_gt[2])
+        self.__x_gt[1] += self.__dt*self.__vel*np.sin(self.__x_gt[2])
+        self.__x_gt[2] += self.__dt*self.__omega
+        if self.__x_gt[2] > np.pi:
+            self.__x_gt[2] -= 2*np.pi
+        if self.__x_gt[2] < -np.pi:
+            self.__x_gt[2] += 2*np.pi
         
         # Position and Direction
-        posx  = self.__x_gt[0,0]
-        posy  = self.__x_gt[1,0]
-        theta = self.__x_gt[2,0]
+        posx  = self.__x_gt[0]
+        posy  = self.__x_gt[1]
+        theta = self.__x_gt[2]
         # Angles
         cos = math.cos(theta)
         sin = math.sin(theta)
@@ -404,15 +430,21 @@ class RobotSim(object):
                 self.__bot_parts_est[s].set_xy(pts)
             self.__est_state = None
 
-        # Finish plotting stuff
-        plt.axes(xlim=(-0.5,2),ylim=(0,1))
-
         # Plot title
         plt.title("At timestep: %.2f" %(self.__frame_num*self.__dt))
 
         # Update for acceleration history (to visualize path)
         self.__acc_history[0] = self.__acc_history[1]
         self.__acc_history[1] = self.__acc_history[2]
-        self.__acc_history[2] = [self.__x_gt[0,0],self.__x_gt[1,0], self.__x_gt[2,0]]
+        self.__acc_history[2] = [self.__x_gt[0],self.__x_gt[1], self.__x_gt[2]]
+
+        # deactivate waypoints that are marked for deactivation
+        for wp in self.waypoints:
+            if wp.status is 'Marked':
+                wp.markAsInactive()
+
         plt.pause(0.001)
+        if "SaveVideo" in self.mode:
+            self.writer.grab_frame()
         return
+
