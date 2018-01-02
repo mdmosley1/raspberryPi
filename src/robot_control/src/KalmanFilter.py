@@ -26,7 +26,7 @@ class KalmanFilter:
         """
         self.markers = markers
         self.last_time = None # Used to keep track of time between measurements 
-        self.Q_t = np.eye(2)   # process covariance
+        self.Q_t = 25*np.eye(2)   # process covariance
         self.R_t = np.eye(3)   # measurement covariance
         self.P_t = np.eye(3)   # error covariance
         self.x = initial_state # the estimated state
@@ -46,7 +46,6 @@ class KalmanFilter:
         xp - a 3 by 1 numpy array of the prediction of the state
         Pp - a 3 by 3 numpy array of the prediction of the covariance
         """
-
         omega = imu_meas[3]
         current_time = imu_meas[4]
         theta = self.x[2]
@@ -63,7 +62,7 @@ class KalmanFilter:
         dfdn = dt*np.array(( (math.cos(theta), 1), (math.sin(theta), 1), (1, 1) ))
         xp = self.x + dt*np.array((v*np.cos(theta), v*np.sin(theta), omega))
         Pp = np.dot(np.dot(dfdx,self.P_t), dfdx.T) + np.dot(np.dot(dfdn, self.Q_t), dfdn.T)
-
+        
         return xp,Pp
 
 
@@ -91,6 +90,11 @@ class KalmanFilter:
         meas = np.array(meas) # convert to ndarray for easy slicing
         numberOfTags = meas.shape[0]
 
+        if numberOfTags == 0:
+            raise ValueError('Number of Tags should never be zero!')
+
+        # make z_t = weighted average of april tag positions, weighted based on which tag is most directly facing
+        # the camera            
         z_t = np.array((0,0,0)) # initialize measured state
         weightsSum = 0          # sum of weights for taking weighted average
         for tagNum in range(0,numberOfTags):
@@ -106,16 +110,12 @@ class KalmanFilter:
             pos = np.array((x,y))                        
             robotPos = tagPos - np.dot(Rot,pos)
 
-            weight = 1 / abs(theta) # weigth this measurement more heavily if theta is small
+            weight = 1 / abs(theta) # weight this measurement more heavily if theta is small
             weightsSum += weight
             z_t = z_t + np.append(robotPos,robotTheta) * weight #the robot state according to apriltag measurement
-
-            # make z_t = weighted average of april tag positions, weighted based on which tag is most directly facing
-            # the camera
             
         z_t = z_t / weightsSum # normalize average
-        
-        z_t.shape = 3,1
+        z_t = z_t.tolist()
         return z_t
         
     def step_filter(self, v, imu_meas, meas):
