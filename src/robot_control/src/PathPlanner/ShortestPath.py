@@ -25,14 +25,13 @@ def findShortestPath(occupancy_map,x_spacing,y_spacing,start,goal,dilate=0):
     dilate: if dilate > 0, then dilate the occupancy map before finding 
         path so that robot won't clip the edges of obstacles
     """
-
     def findClosestNode(location, myGraph):
         distance = 100
         for vertex in myGraph.vertices.values():
             d = getDist(vertex.pos,location)
             if d < distance:
                 distance = d
-                closestNode = vertex
+                closestNode = vertex.
         return closestNode
 
     def getDist(pos0,pos1):

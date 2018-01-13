@@ -17,7 +17,7 @@ class KalmanFilter:
         """
         Initialize all necessary components for Kalman Filter, using the
         markers (AprilTags) as the map
-        Input: 
+        Input:
         markers - an N by 4 array loaded from the parameters, with each element
             consisting of (x,y,theta,id) where x,y gives the 2D position of a
             marker/AprilTag, theta gives its orientation, and id gives its
@@ -25,7 +25,7 @@ class KalmanFilter:
             moment
         """
         self.markers = markers
-        self.last_time = None # Used to keep track of time between measurements 
+        self.last_time = None # Used to keep track of time between measurements
         self.Q_t = 25*np.eye(2)   # process covariance
         self.R_t = np.eye(3)   # measurement covariance
         self.P_t = np.eye(3)   # error covariance
@@ -55,15 +55,15 @@ class KalmanFilter:
         else:
             dt = current_time - self.last_time
         self.last_time = current_time
-        
-        dfdx = np.eye(3) + dt*np.array([(0, 0,-v*np.sin(theta)), \
+
+        dfdx = np.eye(3) + dt*np.array([(0, 0, -v*np.sin(theta)), \
                                         (0, 0, v*np.cos(theta)), \
                                         (0, 0, 0)]) # jacobian of state transition function
         dfdn = dt*np.array(( (math.cos(theta), 1), (math.sin(theta), 1), (1, 1) ))
         xp = self.x + dt*np.array((v*np.cos(theta), v*np.sin(theta), omega))
         Pp = np.dot(np.dot(dfdx,self.P_t), dfdx.T) + np.dot(np.dot(dfdn, self.Q_t), dfdn.T)
-        
-        return xp,Pp
+
+        return xp, Pp
 
 
     def update(self,z_t,xp,Pp):
@@ -94,7 +94,7 @@ class KalmanFilter:
             raise ValueError('Number of Tags should never be zero!')
 
         # make z_t = weighted average of april tag positions, weighted based on which tag is most directly facing
-        # the camera            
+        # the camera
         z_t = np.array((0,0,0)) # initialize measured state
         weightsSum = 0          # sum of weights for taking weighted average
         for tagNum in range(0,numberOfTags):
@@ -104,20 +104,20 @@ class KalmanFilter:
             tagPos = self.markers[tagID,0:2]
             tagTheta = self.markers[tagID,2]
 
-            robotTheta = tagTheta - theta 
+            robotTheta = tagTheta - theta
             ct,st = np.cos(robotTheta),np.sin(robotTheta)
             Rot = np.array(((ct,-st),(st,ct)))
-            pos = np.array((x,y))                        
+            pos = np.array((x,y))
             robotPos = tagPos - np.dot(Rot,pos)
 
             weight = 1 / abs(theta) # weight this measurement more heavily if theta is small
             weightsSum += weight
             z_t = z_t + np.append(robotPos,robotTheta) * weight #the robot state according to apriltag measurement
-            
+
         z_t = z_t / weightsSum # normalize average
         z_t = z_t.tolist()
         return z_t
-        
+
     def step_filter(self, v, imu_meas, meas):
         """
         Perform step in filter, called every iteration (on robot, at 60Hz)
@@ -141,7 +141,7 @@ class KalmanFilter:
             return z_t
 
         else: # both measurements contain values
-            xp,Pp = self.prediction(v,imu_meas)            
+            xp,Pp = self.prediction(v,imu_meas)
             z_t = self.transformMeasurement(meas)
             x,P = self.update(z_t, xp, Pp)
 

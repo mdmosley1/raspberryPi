@@ -14,7 +14,7 @@ class DiffDriveController():
         self.kb = 0
         self.tol = .05
         self.MAX_SPEED = max_speed
-        self.MIN_SPEED = min_speed        
+        self.MIN_SPEED = min_speed
         self.MAX_OMEGA = max_omega
         self.done = False
 
@@ -25,7 +25,7 @@ class DiffDriveController():
         state - a numpy vector of size 3 by 1 with components (x,y,theta)
         goal - a numpy vector of size 2 by 1 specifying the location of the goal
         Outputs: a tuple with 3 elements
-        v - a number specifying the forward speed (in m/s) of the robot (should 
+        v - a number specifying the forward speed (in m/s) of the robot (should
             be no more than max_speed)
         omega - a number specifying the angular velocity (in rad/s) of the robot
             (should be no more than max_omega)
@@ -68,4 +68,4 @@ class DiffDriveController():
         if np.abs(rho) < self.tol:
             self.done = True
 
-        return v,omega,self.done
+        return v, omega, self.done

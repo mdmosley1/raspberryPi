@@ -1,12 +1,9 @@
 #!/usr/bin/python
 import numpy as np
-import time
 import matplotlib.pyplot as plt
 from matplotlib import animation
 from matplotlib import patches
 
-#import thread
-import time
 import math
 
 class RobotSim(object):
@@ -44,13 +41,14 @@ class RobotSim(object):
         # Current estimate of state - for visualization purposes
         self.__est_state = None
         # framerate of the simulation (also used for integration)
-        self.__dt = 0.05
+        self.__dt = 0.18
         # How many time steps behind the robot the path is drawn
         self.__lag_len = 100000
         # How wide to draw the markers in the simulation
-        self.__marker_width = 0.02#0.05
+        self.__marker_width = 0.05
         # How high to draw the markers in the simulation
-        self.__marker_height = 0.075#0.1
+        self.__marker_height = 0.1
+        self.marker_offset = 0.04
         # Simulated IMU noise structure
         self.__imu_noise = [0.02, 0.02, 0.02, 0.01]
         # Simulated control input noise structure
@@ -60,16 +58,16 @@ class RobotSim(object):
         # Maximum allowed angular velocity of the simulated robot (rad/s)
         self.__MAX_OMEGA = max_omega
         # Maximum allowed forward velocity of the simulated robot (m/s)
-        self.__MAX_VELOCITY = max_speed 
+        self.__MAX_VELOCITY = max_speed
         # IMU gravity vector magnitude
         self.__GRAVITY = -9.81
         # Receiving rate for image measurements
         self.__MEAS_RATE = 0.15
-        # Rate of IMU (currently faster than simulation rate 
+        # Rate of IMU (currently faster than simulation rate
         self.__IMU_RATE = 0.045
         # Shapes for drawing the robot in the simulation
         self.__shapes = [
-                [[ 4, 2],[ 4,-2],[-4,-2],[-4, 2]],
+                [[4, 2], [4, -2], [-4, -2], [-4, 2]],
                 [[-1, 3],[-3, 3],[-3, 2],[-1, 2]],
                 [[ 3, 3],[ 1, 3],[ 1, 2],[ 3, 2]],
                 [[-1,-3],[-3,-3],[-3,-2],[-1,-2]],
@@ -97,7 +95,8 @@ class RobotSim(object):
         # Parameters used to update the robot in the simulation
         self.last_meas_time = -1
         self.last_imu_time = -1
-        self.__view_half_angle = 37*np.pi/180
+        #self.__view_half_angle = 37*np.pi/180
+        self.__view_half_angle = 20*np.pi/180
         self.__x_gt = pos_init
         self.__vel = 0
         self.__omega = 0
@@ -117,7 +116,7 @@ class RobotSim(object):
 
         self.__plot()
 
-            
+
     def get_imu(self):
         """
         Get IMU measurements
@@ -135,9 +134,9 @@ class RobotSim(object):
 
         accx = (self.__acc_history[0, 0]+ self.__acc_history[2, 0]-2* self.__acc_history[1, 0])/(self.__dt**2)
         accy = (self.__acc_history[0, 1]+self.__acc_history[2, 1]-2*self.__acc_history[1, 1])/(self.__dt**2)
-        
+
         omega = self.__omega
-        
+
         imu_meas = np.array([[accx,accy,self.__GRAVITY,omega,curr_time]]).T
 
         imu_meas[0:2,:] = np.dot(R.T, imu_meas[0:2,:])
@@ -153,12 +152,12 @@ class RobotSim(object):
         # Main plot function calls
         self.__line, = plt.plot(self.__x_gt[0], self.__x_gt[1],'o')
         plt.axis('equal')
-        fig = plt.figure()
         if "SaveVideo" in self.mode:
+            fig = plt.figure()
             self.writer.setup(fig,"writer_test.mp4")
-        self.axes = plt.axes(xlim=(-0.1,1.8),ylim=(-0.1,1.0))
+        self.axes = plt.axes(xlim=(-0.1,4),ylim=(-0.1,4.2))
         self.axes.set_aspect('equal')
-       
+
 
         # Viewing angle visualization
         distance = 100
@@ -212,7 +211,7 @@ class RobotSim(object):
                           [np.sin(self.markers_flipped[m][2]), np.cos(self.markers_flipped[m][2])]])
             offset = np.array([[self.__marker_width, self.__marker_height]]).T
             rotated_offset = np.dot(R,offset)
-            
+
             self.__markers[m] = patches.Rectangle(
                 (self.markers_flipped[m][0] - rotated_offset[0]/2.,
                  self.markers_flipped[m][1] - rotated_offset[1]/2.),
@@ -220,21 +219,21 @@ class RobotSim(object):
                 self.__marker_height,
                 angle=(self.markers_flipped[m][2]/np.pi)*180.0,
                 fill=True,facecolor='r',edgecolor='k')
-            
-            dir_offset = np.array([[-self.__marker_width, 0.04]]).T
+
+            dir_offset = np.array([[-self.__marker_width, self.marker_offset]]).T
             rotated_dir_offset = np.dot(R, dir_offset)
             self.__markers_dir[m] = patches.Rectangle(
                 (self.markers_flipped[m][0] - rotated_dir_offset[0]/2.,
                  self.markers_flipped[m][1] - rotated_dir_offset[1]/2.),
                 self.__marker_width*0.5,
-                0.04,
+                self.marker_offset,
                 angle=(self.markers_flipped[m][2]/np.pi)*180.0,
                 fill=True,facecolor='r',edgecolor='k')
             self.axes.add_patch(self.__markers[m])
             self.axes.add_patch(self.__markers_dir[m])
 
         plt.grid(True) # grid on
-            
+
         # Trail points of path
         self.__history_x = np.zeros((1,self.__lag_len))
         self.__history_y = np.zeros((1,self.__lag_len))
@@ -252,7 +251,7 @@ class RobotSim(object):
 
         # plot the goal and waypoints
 
-        plt.plot(self.goal[0],self.goal[1],'ro')            
+        plt.plot(self.goal[0],self.goal[1],'ro')
         for wp in self.waypoints:
             wp.plot(self.axes)
             if "SaveVideo" in self.mode:
@@ -350,7 +349,7 @@ class RobotSim(object):
 
     def get_gt_pose(self):
         return self.__x_gt
-  
+
     def update_frame(self):
         """
         Called to update the simulation on every frame
@@ -361,14 +360,14 @@ class RobotSim(object):
         if self.done:
             return # early termination
 
-        # Color visible markers
-        for i in range(len(self.__visible_markers)):
-            if self.__visible_markers[i]:
-                self.__markers[i].set_facecolor('g')
-                self.__markers_dir[i].set_facecolor('y')
-            else:
-                self.__markers[i].set_facecolor('r')
-                self.__markers_dir[i].set_facecolor('r')
+        # # Color visible markers
+        # for i in range(len(self.__visible_markers)):
+        #     if self.__visible_markers[i]:
+        #         self.__markers[i].set_facecolor('g')
+        #         self.__markers_dir[i].set_facecolor('y')
+        #     else:
+        #         self.__markers[i].set_facecolor('r')
+        #         self.__markers_dir[i].set_facecolor('r')
 
         # Update properties
         self.__x_gt[0] += self.__dt*self.__vel*np.cos(self.__x_gt[2])
@@ -378,7 +377,7 @@ class RobotSim(object):
             self.__x_gt[2] -= 2*np.pi
         if self.__x_gt[2] < -np.pi:
             self.__x_gt[2] += 2*np.pi
-        
+
         # Position and Direction
         posx  = self.__x_gt[0]
         posy  = self.__x_gt[1]
@@ -424,7 +423,7 @@ class RobotSim(object):
                 for k in range(len(self.__shapes[s])):
                     cos = math.cos(self.__est_state[2])
                     sin = math.sin(self.__est_state[2])
-                    
+
                     pts[k][0] = self.__est_state[0] + cos*self.__shapes[s][k][0] - sin*self.__shapes[s][k][1]
                     pts[k][1] = self.__est_state[1] + sin*self.__shapes[s][k][0] + cos*self.__shapes[s][k][1]
                 self.__bot_parts_est[s].set_xy(pts)
@@ -447,4 +446,3 @@ class RobotSim(object):
         if "SaveVideo" in self.mode:
             self.writer.grab_frame()
         return
-
