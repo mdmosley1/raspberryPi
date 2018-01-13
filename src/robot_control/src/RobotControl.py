@@ -3,6 +3,8 @@
 Autonomous Rover.  Updated June 15 2016.
 
 """
+
+
 class RobotControl(object):
 
     """Class used to interface with the rover. Gets sensor measurements
@@ -10,6 +12,7 @@ class RobotControl(object):
     and publishes velocity commands.
 
     """
+
     def __init__(self, markers, occupancy_map, pos_init, pos_goal,
                  max_speed, min_speed, max_omega, x_spacing, y_spacing,
                  t_cam_to_body, mode):
@@ -19,7 +22,7 @@ class RobotControl(object):
         # plan a path around obstacles using dijkstra's algorithm
         print('Planning path...')
         path = findShortestPath(occupancy_map, x_spacing, y_spacing,
-                                pos_init[0:2], pos_goal[0:2], dilate = 2)
+                                pos_init[0:2], pos_goal[0:2], dilate=2)
         print('Done!')
         self.path_manager = PathManager(path)
         self.kalman_filter = KalmanFilter(markers, pos_init)
@@ -54,6 +57,7 @@ class RobotControl(object):
         self.robot_sim.command_velocity(v, omega)
         return
 
+
 def main(args):
     if 'HARDWARE' in mode:
         rospy.init_node('robot_control')
@@ -62,7 +66,7 @@ def main(args):
     if 'SIMULATE' in mode:
         param_path = '../params/params.yaml'
 
-    f = open(param_path,'r')
+    f = open(param_path, 'r')
     params_raw = f.read()
     f.close()
     params = yaml.load(params_raw)
@@ -80,7 +84,7 @@ def main(args):
     y_spacing = params['y_spacing']
 
     # Intialize the RobotControl object
-    robotControl = RobotControl(world_map,occupancy_map, pos_init, pos_goal,
+    robotControl = RobotControl(world_map, occupancy_map, pos_init, pos_goal,
                                 max_vel, min_vel, max_omega, x_spacing, y_spacing,
                                 t_cam_to_body, mode)
 
@@ -91,7 +95,7 @@ def main(args):
             robotControl.process_measurements()
             r.sleep()
         # Done, stop robot
-        robotControl.ros_interface.command_velocity(0,0)
+        robotControl.ros_interface.command_velocity(0, 0)
 
     elif 'SIMULATE' in mode:
         # Run the simulation
@@ -103,10 +107,11 @@ def main(args):
         plt.ioff()
         plt.show()
 
+
 if __name__ == "__main__":
 
     import sys
-    mode = sys.argv # keep track of what options I pass to RobotControl
+    mode = sys.argv  # keep track of what options I pass to RobotControl
 
     """
     RobotControl.py can take a few optional arguments
@@ -114,13 +119,11 @@ if __name__ == "__main__":
          HARDWARE: instruct program to use RosInterface class to use hardware
     """
 
-
     print('Importing libraries...')
     import KalmanFilter as KF
     import DiffDriveController as DFC
     import yaml
     import numpy as np
-
 
     if 'HARDWARE' in mode:
         import rospy
@@ -141,7 +144,8 @@ if __name__ == "__main__":
     if 'HARDWARE' in mode:
         try:
             main(sys.argv)
-        except rospy.ROSInterruptException: pass
+        except rospy.ROSInterruptException:
+            pass
 
     elif 'SIMULATE' in mode:
         main(sys.argv)
