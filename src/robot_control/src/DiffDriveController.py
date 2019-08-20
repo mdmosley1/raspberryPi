@@ -7,11 +7,11 @@ class DiffDriveController():
     """
     Class used for controlling the robot linear and angular velocity
     """
+    def __init__(self, max_speed, min_speed, max_omega, waypoints):
 
-    def __init__(self, max_speed, min_speed, max_omega):
         # TODO for Student: Specify these parameters
         self.kp = 0.2
-        self.ka = 2
+        self.ka = 3
         self.kb = 0
         self.tol = .05
         self.MAX_SPEED = max_speed
@@ -49,6 +49,7 @@ class DiffDriveController():
 
         v = self.kp * rho
         omega = self.ka * alpha + self.kb * beta
+
 
         # saturate linear velocity
         if v > self.MAX_SPEED:

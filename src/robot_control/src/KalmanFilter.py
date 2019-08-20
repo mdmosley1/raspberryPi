@@ -43,7 +43,9 @@ class KalmanFilter:
         xp - a 3 by 1 numpy array of the prediction of the state
         Pp - a 3 by 3 numpy array of the prediction of the covariance
         """
-        omega = imu_meas[3]
+
+        omega = -imu_meas[3]
+
         current_time = imu_meas[4]
         theta = self.x[2]
 
@@ -93,12 +95,15 @@ class KalmanFilter:
         if numberOfTags == 0:
             raise ValueError('Number of Tags should never be zero!')
 
+
         # make z_t = weighted average of april tag positions, weighted
         # based on which tag is most directly facing the camera
         z_t = np.array((0, 0, 0))  # initialize measured state
         weightsSum = 0           # sum of weights for taking weighted average
         for tagNum in range(0, numberOfTags):
             x, y, theta, tagID = meas[tagNum, 0:4]
+
+            y = y / 2 # correction factor 
             tagID = int(tagID)
 
             tagPos = self.markers[tagID, 0:2]

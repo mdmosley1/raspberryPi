@@ -57,6 +57,56 @@ class RobotControl(object):
         self.robot_sim.command_velocity(v, omega)
         return
 
+        #meas = None # for testing purposes
+        #imu_meas = None # for testing purpose
+        #pdb.set_trace()
+        if (imu_meas is None) and (meas is None):
+            pass
+        else:
+            state = self.kalman_filter.step_filter(self.vel, imu_meas, meas)
+            if 'SIMULATE' in mode:
+                self.robot_sim.set_est_state(state)
+
+            #print("X = {} cm, Y = {} cm, Theta = {} deg".format(100*state[0],100*state[1],state[2]*180/np.pi))
+
+            # save the estimated state and tag statuses for offline animation
+            self.stateSaved.append(state)
+            self.waypoints.append(self.path_manager.getActiveWaypointsPos())
+            if meas is None:
+                self.tagsSaved.append(None)
+            else:
+                meas = np.array(meas)
+                tagIDs = [int(i) for i in meas[:,3]]
+                self.tagsSaved.append(tagIDs)        
+
+
+            v,omega,wayptReached = self.diff_drive_controller.compute_vel(state, self.goal.pos)
+            self.vel=v
+
+            if wayptReached:
+                self.goal = self.path_manager.getNextWaypoint()
+                self.diff_drive_controller.done = False # reset diff controller status
+
+            if self.goal is None:           
+                print('Goal has been reached!')
+                np.savez('savedState.npz', stateSaved = self.stateSaved, tagsSaved = self.tagsSaved, waypoints = self.waypoints)
+                print('Position data saved!')                
+                if 'HARDWARE' in mode:                
+                    self.ros_interface.command_velocity(0,0)                
+                elif 'SIMULATE' in mode:
+
+                    self.robot_sim.command_velocity(0,0)
+                    self.robot_sim.done = True
+                return                    
+            else:
+                if 'HARDWARE' in mode:
+                    self.ros_interface.command_velocity(self.vel,omega)
+                elif 'SIMULATE' in mode:
+                    self.robot_sim.command_velocity(self.vel,omega)
+        return
+
+    def myhook():
+        print "shutdown time!"
 
 def main(args):
     if 'HARDWARE' in mode:
@@ -90,7 +140,7 @@ def main(args):
 
     if 'HARDWARE' in mode:
         # Call process_measurements at 60Hz
-        r = rospy.Rate(60)
+        r = rospy.Rate(10)
         while (not rospy.is_shutdown()):
             robotControl.process_measurements()
             r.sleep()
